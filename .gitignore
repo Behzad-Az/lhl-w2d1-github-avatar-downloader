@@ -31,6 +31,7 @@ build/Release
 node_modules
 jspm_packages
 avatars
+.env
 
 # Optional npm cache directory
 .npm

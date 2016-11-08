@@ -6,10 +6,11 @@ const repoName = process.argv[3];
 // response from the GitHub API.
 function getRepoContributors(repoOwner, repoName, cb) {
   const request = require('request');
+  require('dotenv').config();
   const GITHUB_USER = "Bhezad-Az";
+  const GITHUB_TOKEN = process.env.gh_TOKEN;
 
-  // Access code replaced with XXXXXX before submitting to GitHub.
-  const GITHUB_TOKEN = "XXXXXXXXXXXXXXXXXXXXXXXXXXX";
+  console.log(GITHUB_TOKEN);
 
   console.log('Welcome to GitHub Avatar Downloader!');
 
