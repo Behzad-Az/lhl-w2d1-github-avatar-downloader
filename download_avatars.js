@@ -1,6 +1,7 @@
 const userName = process.argv[2];
 const repoName = process.argv[3];
 const avatarDir = './avatars/';
+var starredRepos = {};
 
 // Receives the git hub user name and the repo name, requests access to
 // the corresponding GitHub API. Calls back a function that uses the
@@ -16,17 +17,15 @@ function getRepoContributors(repoOwner, repoName, cb) {
   const GITHUB_USER = "Bhezad-Az";
   const GITHUB_TOKEN = process.env.gh_TOKEN;
 
-  console.log(GITHUB_TOKEN);
-
   console.log('Welcome to GitHub Avatar Downloader!');
 
   var options = {
-    url: 'https://'+ GITHUB_USER + ':' + GITHUB_TOKEN + '@api.github.com/repos/' + repoOwner + '/' + repoName + '/contributors',
+    url: 'https://'+ GITHUB_USER + ':' + GITHUB_TOKEN + '@api.github.com/repos/'
+          + repoOwner + '/' + repoName + '/contributors',
     headers: {
       'User-Agent': 'Behzad'
     }
   };
-
   request(options, getContributorAvatar);
 }
 
@@ -36,6 +35,7 @@ function getRepoContributors(repoOwner, repoName, cb) {
 // url, which is then passed to another callback fcn.
 function getContributorAvatar (error, response, body) {
   const EXPECTED_ARG_COUNT = 3;
+  var starUrl = "";
   checkNumOfFcnArguments(EXPECTED_ARG_COUNT, arguments.length, getRepoContributors.name);
 
   if (!error && response.statusCode === 200) {
@@ -44,7 +44,10 @@ function getContributorAvatar (error, response, body) {
     checkDirectoryExist (avatarDir);
 
     for (item in jsonBody) {
+      starUrl = jsonBody[item].starred_url.replace('{/owner}{/repo}','');
+      starUrl = starUrl.replace('https://','');
       getAndSaveAvatars(jsonBody[item].avatar_url, jsonBody[item].login, avatarDir);
+      getStarRepo(starUrl);
     }
   } else {
     var error = "Error occured - repo name or user name does not exist";
@@ -71,7 +74,6 @@ function getAndSaveAvatars (url, user, filePath) {
          .on('response', function (response) {
             console.log('Download for ' + user + ' is Complete.');
          })
-
          .pipe(fs.createWriteStream(filePath + user + '.jpg'));
 }
 
@@ -124,5 +126,61 @@ function checkEnvData (arrOfCredentials) {
   });
 }
 
-// Run the code for the given user name and repo name.
+
+// I ran out of time to comment this bit properly. Also, while
+// the code beow works fine, I think it can be optimized quite a bit.
+// Find the top five starred repos amongst the original user group.
+function getStarRepo (starUrl) {
+
+  const request = require('request');
+  require('dotenv').config();
+  const GITHUB_USER = "Bhezad-Az";
+  const GITHUB_TOKEN = process.env.gh_TOKEN;
+
+  var options = {
+    url: 'https://'+ GITHUB_USER + ':' + GITHUB_TOKEN +
+          '@' + starUrl,
+    headers: {
+      'User-Agent': 'Behzad'
+    }
+  };
+
+  request(options, fillStarObj)
+}
+
+function fillStarObj (error, response, body) {
+
+  if (!error && response.statusCode === 200) {
+    var jsonBody = JSON.parse(body);
+
+    for (item in jsonBody) {
+      currRepo = jsonBody[item].full_name;
+      if (starredRepos[currRepo] === undefined) starredRepos[currRepo] = 0;
+      starredRepos[currRepo]++;
+    }
+  }
+}
+
+function findTopFiveStars(obj)
+{
+  // convert object into array
+    var sortable=[];
+    for(var key in obj)
+        if(obj.hasOwnProperty(key))
+            sortable.push([key, obj[key]]);
+
+    // sort items by value
+    sortable.sort(function(a, b)
+    {
+      return a[1]-b[1];
+    });
+    console.log(sortable.slice(sortable.length-5, sortable.length));
+}
+
+
+
+// Run the main code. Wait and then return the top five recommended repos.
 getRepoContributors(userName,repoName,getContributorAvatar);
+setTimeout(function() {
+  findTopFiveStars(starredRepos)
+}, 5000);
